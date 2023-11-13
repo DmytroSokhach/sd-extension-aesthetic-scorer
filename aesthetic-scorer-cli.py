@@ -97,12 +97,21 @@ def aesthetic_score(fn, params):
         if exif.UserComment is None and exif.parameters is not None:
             exif.exif['UserComment'] = exif.parameters
             del exif.exif['parameters']
+        # try update metadata
         if exif.UserComment is None:
+            print("UserComment is empty: Adding score.")
             exif.exif['UserComment'] = f'Score: {score}'
         elif 'Score:' in exif.UserComment:
+            print("Score found: Replacing.")
             exif.exif['UserComment'] = re.sub(r'Score: \d+.\d+', f'Score: {score}', exif.UserComment)
         else:
-            exif.exif['UserComment'] += f', Score: {score}'
+            print("Score not found: Adding to metadata.")
+            matches = re.findall(r'Steps:\s.*\n', exif.UserComment, flags=re.MULTILINE)
+            match = next(iter(matches), None)
+            if match:
+                exif.exif['UserComment'] = re.sub(r'(Steps:\s.*)', repl=fr'\1, Score: {score}', string=exif.UserComment, flags=re.MULTILINE)
+            else:
+                exif.exif['UserComment'] += f', Score: {score}'
 
         if params.save != '#': # save to specified file
             if os.path.isdir(params.save):
@@ -110,6 +119,7 @@ def aesthetic_score(fn, params):
             else:
                 fn = params.save
     
+        print()
         ext = pathlib.Path(fn).suffix.lower()
         if ext == '.jpg' or ext == '.jpeg' or ext == '.webp':
             print('Saving image:', fn)
