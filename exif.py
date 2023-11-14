@@ -26,6 +26,8 @@ class Exif: # pylint: disable=single-string-used-for-slots
 
     def load(self, img: Image):
         img.load() # exif may not be ready
+        self.set_dimensions(img)
+
         exif_dict = {}
         try:
             exif_dict = dict(img._getexif().items()) # pylint: disable=protected-access
@@ -79,6 +81,13 @@ class Exif: # pylint: disable=single-string-used-for-slots
         raw = b'Exif\x00\x00' + exif_stream.getvalue()
         return raw
 
+    def set_dimensions(self, img):
+        dimensions = f'{img.width}x{img.height}'
+        self.exif['Dimensions'] = dimensions
+        self.pnginfo.add_text('Dimensions', str(dimensions), zip=False)
+
+    def get_dimensions(self):
+        return self.exif['Dimensions']
 
 def read_exif(filename: str):
     try:

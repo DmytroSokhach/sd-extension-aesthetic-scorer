@@ -92,6 +92,8 @@ def aesthetic_score(fn, params):
     clip_image_embed = functional.normalize(encoded, dim = -1)
     score = aesthetic_model(clip_image_embed)
     score = round(score.item(), 2)
+    print(f'Aesthetic score: {score} for image {fn}')
+    
     if params.save is not None:
         # prepare metadata
         if exif.UserComment is None and exif.parameters is not None:
@@ -99,10 +101,14 @@ def aesthetic_score(fn, params):
             del exif.exif['parameters']
         # try update metadata
         if exif.UserComment is None:
-            print("UserComment is empty: Adding score.")
-            exif.exif['UserComment'] = f'Score: {score}'
+            print("UserComment and Parameters are empty: Adding score.")
+            resolution = exif.get_dimensions()
+            empty_template = f"\nNegative prompt:\nSteps: 1, Size: {resolution}"
+            exif.exif['UserComment'] = f'{empty_template}, Score: {score}'
         elif 'Score:' in exif.UserComment:
+            # TODO: extract {old_score} and add into next message
             print("Score found: Replacing.")
+            # TODO: if score is same, do not touch
             exif.exif['UserComment'] = re.sub(r'Score: \d+.\d+', f'Score: {score}', exif.UserComment)
         else:
             print("Score not found: Adding to metadata.")
@@ -119,7 +125,6 @@ def aesthetic_score(fn, params):
             else:
                 fn = params.save
     
-        print()
         ext = pathlib.Path(fn).suffix.lower()
         if ext == '.jpg' or ext == '.jpeg' or ext == '.webp':
             print('Saving image:', fn)
@@ -133,7 +138,7 @@ def aesthetic_score(fn, params):
             print('Save image unknown format', fn)
     if params.exif:
         print('Metadata:', exif.exif)
-    print(f'Aesthetic score: {score} for image {fn}')
+    print()
     return score
 
 
