@@ -5,6 +5,7 @@ import io
 import re
 import sys
 from PIL import Image, ExifTags, TiffImagePlugin, PngImagePlugin
+import piexif
 
 # warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -30,7 +31,10 @@ class Exif: # pylint: disable=single-string-used-for-slots
 
         exif_dict = {}
         try:
-            exif_dict = dict(img._getexif().items()) # pylint: disable=protected-access
+            raw_exif = img._getexif() # pylint: disable=protected-access
+            if not raw_exif:
+                raw_exif = {}
+            exif_dict = dict(raw_exif.items())
         except:
             exif_dict = dict(img.info.items())
         for key, val in exif_dict.items():
@@ -70,6 +74,17 @@ class Exif: # pylint: disable=single-string-used-for-slots
         return None
 
     def get_bytes(self):
+        # exif_dict = {}
+        # exif_ifd = {}
+        # for key, val in self.exif.items():
+        #     if key in self.ids:
+        #         exif_ifd[self.ids[key]] = val
+        #     else:
+        #         print('metadata unknown exif tag:', key, val)
+        # exif_dict = {"Exif": exif_ifd}
+        # exif_bytes = piexif.dump(exif_dict)
+        # return exif_bytes
+
         ifd = TiffImagePlugin.ImageFileDirectory_v2()
         exif_stream = io.BytesIO()
         for key, val in self.exif.items():
@@ -79,15 +94,25 @@ class Exif: # pylint: disable=single-string-used-for-slots
                 print('metadata unknown exif tag:', key, val)
         ifd.save(exif_stream)
         raw = b'Exif\x00\x00' + exif_stream.getvalue()
-        return raw
+
+        exif_dict = piexif.load(raw)
+        exif_ifd = exif_dict["Exif"]
+        # a = "not asd"
+        a = "not generated image\nNegative prompt: none\nSteps: 1, Size: 498x1024, Score: 4.86"
+        exif_ifd[piexif.ExifIFD.UserComment] = a.encode('utf-8')
+        exif_dict["Exif"] = exif_ifd
+        exif_bytes = piexif.dump(exif_dict)
+
+        return exif_bytes
+        
 
     def set_dimensions(self, img):
-        dimensions = f'{img.width}x{img.height}'
-        self.exif['Dimensions'] = dimensions
-        self.pnginfo.add_text('Dimensions', str(dimensions), zip=False)
+        self.dimensions = f'{img.width}x{img.height}'
+        # self.exif['Dimensions'] = self.dimensions
+        self.pnginfo.add_text('Dimensions', str(self.dimensions), zip=False)
 
     def get_dimensions(self):
-        return self.exif['Dimensions']
+        return self.dimensions
 
 def read_exif(filename: str):
     try:

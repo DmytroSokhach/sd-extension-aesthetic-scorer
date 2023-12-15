@@ -81,17 +81,18 @@ def aesthetic_score(fn, params):
     except Exception as e:
         print('Aesthetic scorer failed to open image:', e)
         return 0
-    load_models(params)
+    # load_models(params)
     exif = Exif(img)
-    thumb = img.convert('RGB')
-    thumb = tf.resize(thumb, 224, transforms.InterpolationMode.LANCZOS) # resizes smaller edge
-    thumb = tf.center_crop(thumb, (224,224)) # center crop non-squared images
-    thumb = tf.to_tensor(thumb).to(device)
-    thumb = normalize(thumb)
-    encoded = clip_model.encode_image(thumb[None, ...]).float()
-    clip_image_embed = functional.normalize(encoded, dim = -1)
-    score = aesthetic_model(clip_image_embed)
-    score = round(score.item(), 2)
+    # thumb = img.convert('RGB')
+    # thumb = tf.resize(thumb, 224, transforms.InterpolationMode.LANCZOS) # resizes smaller edge
+    # thumb = tf.center_crop(thumb, (224,224)) # center crop non-squared images
+    # thumb = tf.to_tensor(thumb).to(device)
+    # thumb = normalize(thumb)
+    # encoded = clip_model.encode_image(thumb[None, ...]).float()
+    # clip_image_embed = functional.normalize(encoded, dim = -1)
+    # score = aesthetic_model(clip_image_embed)
+    # score = round(score.item(), 2)
+    score = 5.00
     print(f'Aesthetic score: {score} for image {fn}')
     
     if params.save is not None:
@@ -119,6 +120,18 @@ def aesthetic_score(fn, params):
             else:
                 exif.exif['UserComment'] += f', Score: {score}'
 
+        a = "not generated image\nNegative prompt: none\nSteps: 1, Size: 498x1024, Score: 4.86"
+        exif.exif['UserComment'] = a
+
+        b = 'from below, Amateur photo of girl fucked in the ass by a man with thin long penis <lora:ReverseCowgirlFullNelsonXL:1> Negative prompt: cropped, bad quality, worst quality, normal quality, unaestheticXL_Sky3.1, boring, fake tits  FastNegative unaestheticXL_hk1 Steps: 7, Sampler: DPM++ SDE Karras, CFG scale: 3, Seed: 3512171387, Size: 768x1024, Model hash: c1d5646e8f, Model: RealitiesEdgeXLLCM_TURBOXL, VAE hash: 8db2075341, VAE: sdxl-vae-fp16-fix.safetensors, Lora hashes: "ReverseCowgirlFullNelsonXL: 638df05dcee8", Version: 1.6.0, Score: 2.77'
+        
+        b = 'frombelow'
+        exif.exif['UserComment'] = b
+        
+        # resolution = f'{img.width}x{img.height}'
+        # # exif.exif[u'UserComment'] = f"\nNegative prompt:\nSteps: 1, Size: {resolution}"
+        # exif.exif[u'UserComment'] = f"test"
+
         if params.save != '#': # save to specified file
             if os.path.isdir(params.save):
                 fn = os.path.join(params.save, os.path.basename(fn))
@@ -127,8 +140,10 @@ def aesthetic_score(fn, params):
     
         ext = pathlib.Path(fn).suffix.lower()
         if ext == '.jpg' or ext == '.jpeg' or ext == '.webp':
+            if img.mode == 'RGBA':
+                img = img.convert("RGB")
             print('Saving image:', fn)
-            img.save(fn, exif=exif.bytes(), quality=params.quality)
+            img.save(fn, exif=exif.get_bytes(), quality="keep")
         elif ext == '.png':
             print('Saving image:', fn)
             pnginfo = PngImagePlugin.PngInfo()
